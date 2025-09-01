@@ -1,16 +1,29 @@
 import os
+import streamlit as st
 from dotenv import load_dotenv
 import google.generativeai as genai
 
 # ---------------- Backend Setup ----------------
-# Load API key from .env
-load_dotenv()
-genai.configure(api_key=os.getenv("GOOGLE_API_KEY"))
+
+# Try to load API key from .env (local dev)
+if os.path.exists(".env"):
+    load_dotenv()
+    api_key = os.getenv("GOOGLE_API_KEY")
+else:
+    # Fallback: use Streamlit secrets in production
+    api_key = st.secrets.get("GOOGLE_API_KEY")
+
+# Configure Gemini model
+if not api_key:
+    raise ValueError("❌ GOOGLE_API_KEY is missing. Please set it in .env (local) or st.secrets (production).")
+
+genai.configure(api_key=api_key)
 
 # Initialize Gemini model
 model = genai.GenerativeModel("gemini-1.5-flash")
 
 
+# ---------------- Utility Functions ----------------
 def format_prompt(user_input, user_profile=""):
     """Format user query into a structured prompt for better answers."""
     return f"""
@@ -34,9 +47,9 @@ def get_chatbot_response(user_input, user_profile=""):
     return response.text
 
 
-def calculate_bmi(weight, height):
+def calculate_bmi(weight, height_cm):
     """Calculate BMI from weight (kg) and height (cm)."""
-    return weight / ((height / 100) ** 2)
+    return weight / ((height_cm / 100) ** 2)
 
 
 def calculate_maintenance_calories(weight, activity_level):
